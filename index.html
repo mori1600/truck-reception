@@ -567,6 +567,27 @@ function getFiltered(ym){
 
 function waitMin(e){
   if(e.calledAt==null) return null;
+  // 夜間登録（17:30〜翌8:30）の場合は翌8:30を起点として待ち時間を計算
+  var regTime = e.t;
+  var regH = regTime.getHours(), regM = regTime.getMinutes();
+  var regCur = regH*60+regM;
+  var nightSt = 17*60+30, nightEn = 8*60+30;
+  var isNightReg = (regCur >= nightSt || regCur < nightEn);
+  if(isNightReg){
+    // 翌8:30を起点時刻として計算
+    var base = new Date(regTime);
+    if(regCur < nightEn){
+      // 深夜〜8:30前：今日の8:30
+      base.setHours(8,30,0,0);
+    } else {
+      // 17:30以降：翌日の8:30
+      base.setDate(base.getDate()+1);
+      base.setHours(8,30,0,0);
+    }
+    // 呼び出しが8:30より前なら待ち時間0とする
+    if(e.calledAt < base) return 0;
+    return Math.floor((e.calledAt-base)/60000);
+  }
   return Math.floor((e.calledAt-e.t)/60000);
 }
 
