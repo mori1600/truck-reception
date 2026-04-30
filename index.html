@@ -978,13 +978,76 @@ function addSample(){
 }
 
 /* ---- 初期化 ---- */
-addSample(); // デモ用サンプルデータ投入
-issueToken();
-startTimer();
-renderBoard();
-buildMonthSel();
-initNightQR();
-setInterval(initNightQR, 60000);
+
+// URLパラメータにdrvがあればドライバーモードで起動
+var _drvToken = _urlParams['drv'] || '';
+
+if(_drvToken){
+  // ドライバーモード：iPad用UIを非表示
+  document.getElementById('ipad-tabs').style.display   = 'none';
+  document.getElementById('view-ipad').style.display   = 'none';
+  document.getElementById('info-banner').style.display = 'none';
+  document.getElementById('view-drv').style.display    = 'block';
+  document.getElementById('btn-mode-drv').classList.add('on');
+  document.getElementById('btn-mode-ipad').classList.remove('on');
+  document.getElementById('pg-reg').style.display  = 'block';
+  document.getElementById('pg-stat').style.display = 'none';
+
+  var ab = document.getElementById('auth-msg');
+  var rb = document.getElementById('btn-dreg');
+  var nb = document.getElementById('night-badge');
+
+  if(isNightToken(_drvToken)){
+    // 夜間トークン：時間帯チェック → GPS確認
+    if(!isNightTime()){
+      ab.className   = 'auth-ng';
+      ab.textContent = '✗ 時間外受付の対象時間外です（受付時間：17:30〜翌8:30）';
+      rb.disabled    = true;
+      rb.style.opacity = '0.4';
+      if(nb) nb.style.display = 'none';
+    } else {
+      ab.className   = 'auth-ok';
+      ab.textContent = '🌙 時間外受付QR認証済み。位置情報を確認しています...';
+      rb.disabled    = true;
+      rb.style.opacity = '0.4';
+      checkNightGPS(function(ok, msg){
+        if(ok){
+          ab.className   = 'auth-ok';
+          ab.style.background  = '#FAEEDA';
+          ab.style.borderColor = '#E8A838';
+          ab.style.color       = '#854F0B';
+          ab.textContent = '✓ 時間外受付QR認証済み（工場から' + msg + '）';
+          rb.disabled    = false;
+          rb.style.opacity = '1';
+          if(nb) nb.style.display = 'block';
+        } else {
+          ab.className   = 'auth-ng';
+          ab.textContent = '✗ ' + msg;
+          rb.disabled    = true;
+          rb.style.opacity = '0.4';
+          if(nb) nb.style.display = 'none';
+        }
+      });
+    }
+  } else {
+    // 通常トークン：有効期限チェック（TOKENS配列にないため無効）
+    ab.className   = 'auth-ng';
+    ab.textContent = '✗ このQRコードは期限切れです。受付iPadの新しいQRコードをスキャンしてください。';
+    rb.disabled    = true;
+    rb.style.opacity = '0.4';
+    if(nb) nb.style.display = 'none';
+  }
+
+} else {
+  // iPadモード：通常起動
+  addSample();
+  issueToken();
+  startTimer();
+  renderBoard();
+  buildMonthSel();
+  initNightQR();
+  setInterval(initNightQR, 60000);
+}
 
 })();
 </script>
