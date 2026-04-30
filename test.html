@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPS・QRテスト</title>
+<style>
+body{font-family:-apple-system,sans-serif;padding:20px;background:#f5f5f3;}
+.box{background:white;border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid #ddd;}
+h2{font-size:15px;color:#2c2c2a;margin-bottom:12px;}
+button{width:100%;padding:14px;border:none;border-radius:8px;font-size:14px;font-weight:600;color:white;background:#2c2c2a;margin-top:8px;cursor:pointer;}
+.result{background:#f1efe8;border-radius:8px;padding:12px;margin-top:10px;font-size:13px;color:#2c2c2a;line-height:1.8;word-break:break-all;}
+.ok{background:#EAF3DE;color:#2d6a1f;}
+.ng{background:#FCEBEB;color:#A32D2D;}
+</style>
+</head>
+<body>
+
+<div class="box">
+  <h2>① 現在時刻の確認</h2>
+  <div id="time-result" class="result">ボタンを押してください</div>
+  <button id="btn-time">現在時刻を確認</button>
+</div>
+
+<div class="box">
+  <h2>② GPS位置情報テスト</h2>
+  <div id="gps-result" class="result">ボタンを押してください</div>
+  <button id="btn-gps">位置情報を取得する</button>
+</div>
+
+<div class="box">
+  <h2>③ 工場までの距離計算</h2>
+  <div style="font-size:12px;color:#5f5e5a;margin-bottom:8px;">工場座標: 35.03824, 136.79038</div>
+  <div id="dist-result" class="result">②のGPS取得後に計算されます</div>
+</div>
+
+<div class="box">
+  <h2>④ URLパラメータ確認</h2>
+  <div id="url-result" class="result">ボタンを押してください</div>
+  <button id="btn-url">URLを確認</button>
+</div>
+
+<script>
+var LAT = 35.03824266375355;
+var LNG = 136.7903838499678;
+
+document.getElementById('btn-time').addEventListener('click', function(){
+  var now = new Date();
+  var h = now.getHours(), m = now.getMinutes();
+  var cur = h * 60 + m;
+  var isNight = cur >= 17*60+30 || cur < 8*60+30;
+  var el = document.getElementById('time-result');
+  el.textContent = '現在時刻: ' + h + ':' + (m<10?'0':'') + m + '\n' +
+                   '時間外判定: ' + (isNight ? '✓ 時間内（17:30〜翌8:30）' : '✗ 時間外（8:30〜17:30）');
+  el.className = 'result ' + (isNight ? 'ok' : 'ng');
+});
+
+document.getElementById('btn-gps').addEventListener('click', function(){
+  var el = document.getElementById('gps-result');
+  var el2 = document.getElementById('dist-result');
+  el.textContent = '位置情報を取得中...';
+  el.className = 'result';
+  if(!navigator.geolocation){
+    el.textContent = '✗ この端末はGPSに対応していません';
+    el.className = 'result ng';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+      var acc = pos.coords.accuracy;
+      el.textContent = '✓ GPS取得成功\n緯度: ' + lat.toFixed(6) + '\n経度: ' + lng.toFixed(6) + '\n精度: ±' + Math.round(acc) + 'm';
+      el.className = 'result ok';
+      // 距離計算
+      var R = 6371000;
+      var dLat = (lat - LAT) * Math.PI / 180;
+      var dLng = (lng - LNG) * Math.PI / 180;
+      var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+              Math.cos(LAT*Math.PI/180)*Math.cos(lat*Math.PI/180)*
+              Math.sin(dLng/2)*Math.sin(dLng/2);
+      var dist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+      var ok = dist <= 100;
+      el2.textContent = '工場までの距離: ' + dist + 'm\n' +
+                        (ok ? '✓ 100m以内 → 登録可能' : '✗ 100m超（' + dist + 'm）→ 登録不可');
+      el2.className = 'result ' + (ok ? 'ok' : 'ng');
+    },
+    function(err){
+      var msg = ['', '位置情報の使用が拒否されました', '位置情報を取得できませんでした', 'タイムアウトしました'];
+      el.textContent = '✗ エラー: ' + (msg[err.code] || err.message);
+      el.className = 'result ng';
+    },
+    {enableHighAccuracy:true, timeout:15000, maximumAge:0}
+  );
+});
+
+document.getElementById('btn-url').addEventListener('click', function(){
+  var el = document.getElementById('url-result');
+  el.textContent = 'URL: ' + window.location.href + '\nパラメータ: ' + (window.location.search || 'なし');
+  el.className = 'result';
+});
+</script>
+</body>
+</html>
