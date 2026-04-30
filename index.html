@@ -371,6 +371,22 @@ function initNightQR(){
   drawQRCanvas('night-qr-canvas', NIGHT_TOKEN);
 }
 
+function drawQRCanvasWithTest(wrapId, token, testHour){
+  // テスト用時刻パラメータをURLに付加してQR生成
+  var el = document.getElementById(wrapId);
+  if(!el) return;
+  el.innerHTML = '';
+  var url = BASE_URL + '?drv=' + token + '&testhour=' + testHour;
+  try{
+    new QRCode(el, {
+      text: url,
+      width: 200, height: 200,
+      colorDark: '#2c2c2a', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }catch(e){ el.textContent = 'QR生成エラー: ' + e; }
+}
+
 function drawQRCanvas(canvasId, token){
   // 夜間QR: divラッパーIDで描画
   var wrapId = canvasId.replace('-canvas', '-wrap');
@@ -776,21 +792,24 @@ document.getElementById('btn-sim').addEventListener('click',function(){
 // 時間帯テストボタン
 document.getElementById('test-real').addEventListener('click',function(){
   FAKE_HOUR = -1;
-  document.getElementById('fake-time-disp').textContent = '実際の時刻を使用';
+  document.getElementById('fake-time-disp').textContent = '実際の時刻';
   document.getElementById('fake-time-disp').style.color = '#2c2c2a';
-  toast('実際の時刻に戻しました');
+  initNightQR(); // QR再生成（testパラメータなし）
+  toast('実際の時刻に戻しました。QRを再生成しました。');
 });
 document.getElementById('test-in').addEventListener('click',function(){
-  FAKE_HOUR = 18; // 18:00 → 時間内
+  FAKE_HOUR = 18;
   document.getElementById('fake-time-disp').textContent = '18:00（時間内）';
   document.getElementById('fake-time-disp').style.color = '#2d6a1f';
-  toast('仮想時刻を18:00（時間内）に設定しました');
+  drawQRCanvasWithTest('night-qr-wrap', NIGHT_TOKEN, 18); // test=18付きQR
+  toast('時間内に設定しました。QRを再生成しました。このQRをスキャンしてください。');
 });
 document.getElementById('test-out').addEventListener('click',function(){
-  FAKE_HOUR = 12; // 12:00 → 時間外
+  FAKE_HOUR = 12;
   document.getElementById('fake-time-disp').textContent = '12:00（時間外）';
   document.getElementById('fake-time-disp').style.color = '#A32D2D';
-  toast('仮想時刻を12:00（時間外）に設定しました');
+  drawQRCanvasWithTest('night-qr-wrap', NIGHT_TOKEN, 12); // test=12付きQR
+  toast('時間外に設定しました。QRを再生成しました。このQRをスキャンしてください。');
 });
 
 document.getElementById('btn-sim-night').addEventListener('click',function(){
@@ -980,7 +999,9 @@ function addSample(){
 /* ---- 初期化 ---- */
 
 // URLパラメータにdrvがあればドライバーモードで起動
-var _drvToken = _urlParams['drv'] || '';
+var _drvToken  = _urlParams['drv']      || '';
+var _testHour  = _urlParams['testhour'] ? parseInt(_urlParams['testhour']) : -1;
+if(_testHour >= 0) FAKE_HOUR = _testHour; // テスト用時刻をスマホ側に反映
 
 if(_drvToken){
   // ドライバーモード：iPad用UIを非表示
