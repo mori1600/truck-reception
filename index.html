@@ -99,6 +99,7 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
   #print-content { width:100% !important; margin:0 !important; padding:15mm 12mm !important; }
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="topbar">
@@ -131,7 +132,7 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
     </div>
     <div class="box">
       <div class="sec">ドライバー受付用QRコード（90秒ごと自動更新）</div>
-      <div class="qr-center"><canvas id="qr-canvas" width="200" height="200"></canvas></div>
+      <div class="qr-center"><div id="qr-canvas-wrap" style="display:inline-block;"></div></div>
       <div class="tbar-out"><div class="tbar-in" id="tbar" style="width:100%"></div></div>
       <div class="tbar-txt">次の更新まで <span id="tsec">90</span> 秒</div>
       <div class="tok">トークン: <span id="tok-val">-</span></div>
@@ -145,7 +146,7 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
       <div style="background:#FAEEDA;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#854F0B;line-height:1.6;">
         ⚠ 工場敷地内（半径100m以内）かつ時間外（17:30〜翌8:30）のみ有効です。
       </div>
-      <div class="qr-center"><canvas id="night-qr-canvas" width="200" height="200"></canvas></div>
+      <div class="qr-center"><div id="night-qr-wrap" style="display:inline-block;"></div></div>
       <div style="background:#f1efe8;border-radius:8px;padding:10px 12px;margin-top:10px;margin-bottom:10px;">
         <div style="font-size:11px;font-weight:600;color:#5f5e5a;margin-bottom:6px;">🧪 時間帯テスト（デモ確認用）</div>
         <div style="font-size:12px;color:#5f5e5a;margin-bottom:8px;">仮想時刻：<span id="fake-time-disp" style="font-weight:600;color:#2c2c2a;">実際の時刻</span></div>
@@ -253,42 +254,24 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
 var Q=[], NID=1, LAST=null, DEMO_TOK='', TOKENS=[];
 var TTL=90, tLeft=90, tIv=null;
 
-/* ---- QR描画 ---- */
+/* ---- QR描画（qrcode.js使用） ---- */
+var BASE_URL = 'https://mori1600.github.io/truck-reception/';
+var qrNormal = null;
+var qrNight  = null;
+
 function drawQR(token){
-  var canvas=document.getElementById('qr-canvas');
-  var ctx=canvas.getContext('2d');
-  var size=200;
-  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,size,size);
-  var seed=0;
-  for(var i=0;i<token.length;i++) seed=(seed*31+token.charCodeAt(i))&0xffffffff;
-  var n=21, m=[];
-  for(var r=0;r<n;r++){m[r]=[];for(var c=0;c<n;c++) m[r][c]=0;}
-  function fp(row,col){
-    for(var r2=0;r2<7;r2++) for(var c2=0;c2<7;c2++){
-      var v=(r2==0||r2==6||c2==0||c2==6||(r2>=2&&r2<=4&&c2>=2&&c2<=4))?1:0;
-      if(row+r2<n&&col+c2<n) m[row+r2][col+c2]=v;
-    }
-  }
-  fp(0,0); fp(0,14); fp(14,0);
-  for(var i=0;i<8;i++){
-    if(i<n){m[7][i]=0;m[i][7]=0;m[7][n-1-i]=0;m[i][n-8]=0;m[n-8][i]=0;m[n-1-i][7]=0;}
-  }
-  for(var i=8;i<n-8;i++){m[6][i]=(i%2==0)?1:0;m[i][6]=(i%2==0)?1:0;}
-  var rng=seed>>>0;
-  function rand(){rng=((rng*1664525+1013904223)&0xffffffff)>>>0;return rng;}
-  var used=[];
-  for(var r=0;r<n;r++){used[r]=[];for(var c=0;c<n;c++) used[r][c]=0;}
-  for(var r=0;r<9;r++) for(var c=0;c<9;c++){used[r][c]=1;used[r][n-1-c]=1;used[n-1-r][c]=1;}
-  for(var r=0;r<n;r++){used[r][6]=1;used[6][r]=1;}
-  var bits=[];
-  for(var i=0;i<token.length;i++){var code=token.charCodeAt(i);for(var b=7;b>=0;b--) bits.push((code>>b)&1);}
-  var bi=0;
-  for(var r=0;r<n;r++) for(var c=0;c<n;c++){
-    if(!used[r][c]){m[r][c]=bi<bits.length?bits[bi++]:(rand()%2);}
-  }
-  var cell=Math.floor(size/n), offset=Math.floor((size-cell*n)/2);
-  ctx.fillStyle='#2c2c2a';
-  for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(m[r][c]) ctx.fillRect(offset+c*cell,offset+r*cell,cell,cell);
+  var url = BASE_URL + '?drv=' + token;
+  var el  = document.getElementById('qr-canvas-wrap');
+  if(!el) return;
+  el.innerHTML = '';
+  try{
+    qrNormal = new QRCode(el, {
+      text: url,
+      width: 200, height: 200,
+      colorDark: '#2c2c2a', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }catch(e){ el.textContent = 'QR生成エラー: ' + e; }
 }
 
 /* ---- トークン ---- */
@@ -389,42 +372,20 @@ function initNightQR(){
 }
 
 function drawQRCanvas(canvasId, token){
-  // 既存drawQRと同じロジックをcanvasId指定で使えるよう汎用化
-  var canvas = document.getElementById(canvasId);
-  if(!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var size = 200;
-  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,size,size);
-  var seed=0;
-  for(var i=0;i<token.length;i++) seed=(seed*31+token.charCodeAt(i))&0xffffffff;
-  var n=21, m=[];
-  for(var r=0;r<n;r++){m[r]=[];for(var c=0;c<n;c++) m[r][c]=0;}
-  function fp(row,col){
-    for(var r2=0;r2<7;r2++) for(var c2=0;c2<7;c2++){
-      var v=(r2==0||r2==6||c2==0||c2==6||(r2>=2&&r2<=4&&c2>=2&&c2<=4))?1:0;
-      if(row+r2<n&&col+c2<n) m[row+r2][col+c2]=v;
-    }
-  }
-  fp(0,0); fp(0,14); fp(14,0);
-  for(var i=0;i<8;i++){
-    if(i<n){m[7][i]=0;m[i][7]=0;m[7][n-1-i]=0;m[i][n-8]=0;m[n-8][i]=0;m[n-1-i][7]=0;}
-  }
-  for(var i=8;i<n-8;i++){m[6][i]=(i%2==0)?1:0;m[i][6]=(i%2==0)?1:0;}
-  var rng=seed>>>0;
-  function rand(){rng=((rng*1664525+1013904223)&0xffffffff)>>>0;return rng;}
-  var used=[];
-  for(var r=0;r<n;r++){used[r]=[];for(var c=0;c<n;c++) used[r][c]=0;}
-  for(var r=0;r<9;r++) for(var c=0;c<9;c++){used[r][c]=1;used[r][n-1-c]=1;used[n-1-r][c]=1;}
-  for(var r=0;r<n;r++){used[r][6]=1;used[6][r]=1;}
-  var bits=[];
-  for(var i=0;i<token.length;i++){var code=token.charCodeAt(i);for(var b=7;b>=0;b--) bits.push((code>>b)&1);}
-  var bi=0;
-  for(var r=0;r<n;r++) for(var c=0;c<n;c++){
-    if(!used[r][c]){m[r][c]=bi<bits.length?bits[bi++]:(rand()%2);}
-  }
-  var cell=Math.floor(size/n), offset=Math.floor((size-cell*n)/2);
-  ctx.fillStyle='#2c2c2a';
-  for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(m[r][c]) ctx.fillRect(offset+c*cell,offset+r*cell,cell,cell);
+  // 夜間QR: divラッパーIDで描画
+  var wrapId = canvasId.replace('-canvas', '-wrap');
+  var el = document.getElementById(wrapId);
+  if(!el) return;
+  el.innerHTML = '';
+  var url = BASE_URL + '?drv=' + token;
+  try{
+    qrNight = new QRCode(el, {
+      text: url,
+      width: 200, height: 200,
+      colorDark: '#2c2c2a', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }catch(e){ el.textContent = 'QR生成エラー: ' + e; }
 }
 
 function elapsed(t){var m=Math.floor((new Date()-t)/60000);return m<1?'たった今':m+'分前';}
@@ -843,8 +804,11 @@ document.getElementById('btn-sim-night').addEventListener('click',function(){
   document.getElementById('view-drv').style.display='block';
 });
 document.getElementById('btn-print-night').addEventListener('click',function(){
-  var srcCanvas = document.getElementById('night-qr-canvas');
-  var imgData = srcCanvas.toDataURL();
+  // qrcode.jsが生成したimg要素のsrcを取得
+  var nightWrap = document.getElementById('night-qr-wrap');
+  var qrImg = nightWrap ? nightWrap.querySelector('img') : null;
+  var imgData = qrImg ? qrImg.src : '';
+  if(!imgData){ errMsg('QRコードが生成されていません。少し待ってから再度お試しください。'); return; }
   var overlay = document.getElementById('print-overlay');
   if(!overlay){
     overlay = document.createElement('div');
