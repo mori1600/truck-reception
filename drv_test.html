@@ -184,14 +184,52 @@ document.getElementById('btn-dreg').addEventListener('click', function(){
   var ty=document.getElementById('d-ty').value;
   var nt=(document.getElementById('d-nt').value||'').replace(/[-ー−]/g,'').trim();
 
+  // 夜間登録の場合は翌8:30を受付開始基準時刻として案内
+  var now = new Date();
+  var startTime;
+  var nightMsg = '';
+  if(isNightTime()){
+    // 翌8:30を計算
+    var next830 = new Date(now);
+    if(now.getHours() < 8 || (now.getHours() === 8 && now.getMinutes() < 30)){
+      // 深夜〜8:30前：今日の8:30
+      next830.setHours(8, 30, 0, 0);
+    } else {
+      // 17:30以降：翌日の8:30
+      next830.setDate(next830.getDate() + 1);
+      next830.setHours(8, 30, 0, 0);
+    }
+    startTime = next830;
+    var mm = next830.getMonth()+1, dd = next830.getDate();
+    nightMsg = '夜間受付のため、'+mm+'/'+dd+' 8:30より順番にご案内いたします。';
+  } else {
+    startTime = now;
+  }
+
   // 登録完了表示
   document.getElementById('pg-reg').style.display='none';
   document.getElementById('pg-stat').style.display='block';
   document.getElementById('d-pos').textContent='受付完了';
-  document.getElementById('d-sub').textContent='【マブチ名古屋工場】'+dr+'様、受付しました。順番になりましたらSMSでご連絡いたします。';
+  var subMsg = '【マブチ名古屋工場】'+dr+'様、受付しました。';
+  if(nightMsg) subMsg += '
+' + nightMsg;
+  subMsg += '
+順番になりましたらSMSでご連絡いたします。';
+  document.getElementById('d-sub').textContent=subMsg;
   document.getElementById('d-note').textContent='※このデモ版ではSMSは送信されません';
-  document.getElementById('d-list').innerHTML='<div style="text-align:center;padding:12px;color:#888780;font-size:13px;">スタッフが順番をご案内します</div>';
-  showToast('📱 【マブチ名古屋工場】'+dr+'様、受付しました。順番になりましたら改めてご連絡いたします。');
+  if(nightMsg){
+    document.getElementById('d-list').innerHTML=
+      '<div style="background:#FAEEDA;border-radius:8px;padding:12px;font-size:13px;color:#854F0B;line-height:1.8;text-align:left;">'+
+      '🌙 夜間受付で登録されました。<br>'+
+      '<strong>翌8:30より順番にご案内いたします。</strong><br>'+
+      '順番になりましたらSMSにてご連絡いたします。</div>';
+  } else {
+    document.getElementById('d-list').innerHTML='<div style="text-align:center;padding:12px;color:#888780;font-size:13px;">スタッフが順番をご案内します</div>';
+  }
+  var toastMsg = '📱 【マブチ名古屋工場】'+dr+'様、受付しました。';
+  if(nightMsg) toastMsg += nightMsg;
+  else toastMsg += '順番になりましたら改めてご連絡いたします。';
+  showToast(toastMsg);
 });
 
 document.getElementById('btn-ref').addEventListener('click', function(){
