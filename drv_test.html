@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>荷下ろし受付</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,"Hiragino Sans",sans-serif;background:#f5f5f3;padding:12px;min-height:100vh;}
+.box{background:white;border:1px solid #d3d1c7;border-radius:12px;padding:14px;margin-bottom:10px;}
+.sec{font-size:11px;font-weight:600;color:#5f5e5a;margin-bottom:8px;}
+label{font-size:13px;color:#5f5e5a;display:block;margin:10px 0 3px;}
+input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c7;border-radius:8px;background:white;color:#2c2c2a;-webkit-appearance:none;}
+.bigbtn{width:100%;margin-top:12px;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;color:white;cursor:pointer;}
+.btn-green{background:#2d6a1f;}
+.btn-gray{background:#5f5e5a;margin-top:8px;}
+.auth-ok{background:#EAF3DE;border:1px solid #C0DD97;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:#3B6D11;line-height:1.6;}
+.auth-ng{background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:#A32D2D;line-height:1.6;}
+.auth-warn{background:#FAEEDA;border:1px solid #E8A838;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:#854F0B;line-height:1.6;}
+.toast{background:#EAF3DE;border:1px solid #C0DD97;border-radius:8px;padding:10px;margin-bottom:10px;font-size:13px;color:#3B6D11;display:none;}
+.stat-box{text-align:center;padding:24px 0;}
+.stat-num{font-size:36px;font-weight:600;color:#2c2c2a;margin-bottom:8px;}
+.stat-sub{font-size:13px;color:#5f5e5a;}
+.stat-note{font-size:11px;color:#888780;margin-top:6px;}
+.qrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e8e7e0;}
+.qrow:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+
+<div style="background:white;border-radius:10px;border:1px solid #e0dfd8;padding:10px 14px;margin-bottom:10px;">
+  <div style="font-size:13px;font-weight:600;color:#2c2c2a;">荷下ろし受付　株式会社マブチ　名古屋工場</div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- 登録フォーム -->
+<div id="pg-reg">
+  <div class="box">
+    <div class="sec">荷下ろし受付登録</div>
+    <div id="auth-msg" class="auth-ok">✓ 認証確認中...</div>
+    <div id="night-badge" style="display:none;background:#FAEEDA;border:1px solid #E8A838;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#854F0B;">
+      🌙 時間外受付（17:30〜翌8:30）｜工場敷地内GPS確認済み
+    </div>
+    <label>会社名</label>
+    <input type="text" id="d-co" placeholder="山田運輸">
+    <label>ドライバー名</label>
+    <input type="text" id="d-dr" placeholder="田中 太郎">
+    <label>携帯番号（SMS通知先）</label>
+    <input type="tel" id="d-ph" placeholder="09012345678（ハイフン不要）" inputmode="numeric" maxlength="11">
+    <label>種別</label>
+    <select id="d-ty">
+      <option>搬入（機械部品）</option>
+      <option>搬入（梱包資材）</option>
+      <option>引き取り（完成品）</option>
+      <option>その他</option>
+    </select>
+    <label>車両No.（ハイフン不要）/ 備考</label>
+    <input type="text" id="d-nt" placeholder="愛知123あ4567">
+    <button class="bigbtn btn-green" id="btn-dreg">受付登録する</button>
+  </div>
+</div>
+
+<!-- 登録後の待機画面 -->
+<div id="pg-stat" style="display:none;">
+  <div class="box">
+    <div class="sec">あなたの状況</div>
+    <div class="stat-box">
+      <div class="stat-num" id="d-pos">-</div>
+      <div class="stat-sub" id="d-sub"></div>
+      <div class="stat-note" id="d-note"></div>
+    </div>
+  </div>
+  <div class="box">
+    <div class="sec">全体の待機状況</div>
+    <div id="d-list"><div style="text-align:center;padding:16px;color:#888780;font-size:13px;">登録後に表示されます</div></div>
+  </div>
+  <button class="bigbtn btn-gray" id="btn-ref">🔄 最新状況に更新</button>
+</div>
+
+<script>
+(function(){
+
+/* ===== 設定 ===== */
+var FACTORY_LAT    = 35.03824266375355;
+var FACTORY_LNG    = 136.7903838499678;
+var FACTORY_RADIUS = 100;
+var NIGHT_TOKEN    = 'MABUCHI-NIGHT-YATOMI';
+var NIGHT_START_H  = 17, NIGHT_START_M = 30;
+var NIGHT_END_H    =  8, NIGHT_END_M   = 30;
+var FAKE_HOUR      = -1;
+
+/* ===== URLパラメータ解析 ===== */
+var params = {};
+window.location.search.slice(1).split('&').forEach(function(kv){
+  var p = kv.split('=');
+  if(p[0]) params[decodeURIComponent(p[0])] = decodeURIComponent(p[1]||'');
+});
+var TOKEN    = params['drv']      || '';
+var TESTHOUR = params['testhour'] ? parseInt(params['testhour']) : -1;
+if(TESTHOUR >= 0) FAKE_HOUR = TESTHOUR;
+
+/* ===== 判定関数 ===== */
+function isNightTime(){
+  var h = FAKE_HOUR >= 0 ? FAKE_HOUR : new Date().getHours();
+  var m = FAKE_HOUR >= 0 ? 0         : new Date().getMinutes();
+  var cur = h*60+m, st = NIGHT_START_H*60+NIGHT_START_M, en = NIGHT_END_H*60+NIGHT_END_M;
+  return cur >= st || cur < en;
+}
+function calcDist(lat1,lng1,lat2,lng2){
+  var R=6371000, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+function checkGPS(cb){
+  if(!navigator.geolocation){ cb(false,'位置情報機能が使用できません'); return; }
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      var d=calcDist(pos.coords.latitude,pos.coords.longitude,FACTORY_LAT,FACTORY_LNG);
+      cb(d<=FACTORY_RADIUS, d<=FACTORY_RADIUS ? d+'m' : '工場から'+d+'m離れています（有効範囲：100m以内）');
+    },
+    function(){ cb(false,'位置情報を取得できませんでした。位置情報の使用を許可してください。'); },
+    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+  );
+}
+
+/* ===== フォーム・表示 ===== */
+function fmtPh(ph){
+  var d=ph.replace(/\D/g,'');
+  if(d.length===11) return d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7);
+  if(d.length===10) return d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6);
+  return ph;
+}
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.style.display='block';
+  clearTimeout(t._t); t._t=setTimeout(function(){t.style.display='none';},7000);
+}
+
+var ab = document.getElementById('auth-msg');
+var rb = document.getElementById('btn-dreg');
+var nb = document.getElementById('night-badge');
+
+/* ===== 認証処理 ===== */
+if(!TOKEN){
+  ab.className='auth-ng';
+  ab.textContent='✗ 無効なアクセスです。受付のQRコードをスキャンしてください。';
+  rb.disabled=true; rb.style.opacity='0.4';
+} else if(TOKEN === NIGHT_TOKEN){
+  if(!isNightTime()){
+    ab.className='auth-ng';
+    ab.textContent='✗ 時間外受付の対象時間外です（受付時間：17:30〜翌8:30）';
+    rb.disabled=true; rb.style.opacity='0.4';
+  } else {
+    ab.className='auth-ok';
+    ab.textContent='🌙 QR認証済み。位置情報を確認しています...';
+    rb.disabled=true; rb.style.opacity='0.4';
+    checkGPS(function(ok, msg){
+      if(ok){
+        ab.className='auth-warn';
+        ab.textContent='✓ 時間外受付QR認証済み（工場から'+msg+'）';
+        rb.disabled=false; rb.style.opacity='1';
+        if(nb) nb.style.display='block';
+      } else {
+        ab.className='auth-ng';
+        ab.textContent='✗ '+msg;
+        rb.disabled=true; rb.style.opacity='0.4';
+      }
+    });
+  }
+} else {
+  ab.className='auth-ng';
+  ab.textContent='✗ このQRコードは期限切れです。受付iPadの新しいQRコードをスキャンしてください。';
+  rb.disabled=true; rb.style.opacity='0.4';
+}
+
+/* ===== 登録処理 ===== */
+document.getElementById('btn-dreg').addEventListener('click', function(){
+  var co=(document.getElementById('d-co').value||'').trim()||'未入力';
+  var dr=(document.getElementById('d-dr').value||'').trim()||'未入力';
+  var ph=(document.getElementById('d-ph').value||'').replace(/[-ー−\s]/g,'').trim();
+  if(!ph){ showToast('⚠ 携帯番号を入力してください'); return; }
+  if(!/^0\d{9,10}$/.test(ph)){ showToast('⚠ 携帯番号を正しく入力してください（例：09012345678）'); return; }
+  var ty=document.getElementById('d-ty').value;
+  var nt=(document.getElementById('d-nt').value||'').replace(/[-ー−]/g,'').trim();
+
+  // 登録完了表示
+  document.getElementById('pg-reg').style.display='none';
+  document.getElementById('pg-stat').style.display='block';
+  document.getElementById('d-pos').textContent='受付完了';
+  document.getElementById('d-sub').textContent='【マブチ名古屋工場】'+dr+'様、受付しました。順番になりましたらSMSでご連絡いたします。';
+  document.getElementById('d-note').textContent='※このデモ版ではSMSは送信されません';
+  document.getElementById('d-list').innerHTML='<div style="text-align:center;padding:12px;color:#888780;font-size:13px;">スタッフが順番をご案内します</div>';
+  showToast('📱 【マブチ名古屋工場】'+dr+'様、受付しました。順番になりましたら改めてご連絡いたします。');
+});
+
+document.getElementById('btn-ref').addEventListener('click', function(){
+  showToast('最新の状況に更新しました');
+});
+
+})();
+</script>
+</body>
+</html>
