@@ -114,13 +114,32 @@ function calcDist(lat1,lng1,lat2,lng2){
 }
 function checkGPS(cb){
   if(!navigator.geolocation){ cb(false,'位置情報機能が使用できません'); return; }
+  // 取得中の状況をカウントアップ表示
+  var ab = document.getElementById('auth-msg');
+  var count = 0;
+  var countIv = setInterval(function(){
+    count++;
+    ab.textContent = '🌙 QR認証済み。位置情報を確認しています... (' + count + '秒)';
+  }, 1000);
   navigator.geolocation.getCurrentPosition(
     function(pos){
+      clearInterval(countIv);
       var d=calcDist(pos.coords.latitude,pos.coords.longitude,FACTORY_LAT,FACTORY_LNG);
       cb(d<=FACTORY_RADIUS, d<=FACTORY_RADIUS ? d+'m' : '工場から'+d+'m離れています（有効範囲：100m以内）');
     },
-    function(){ cb(false,'位置情報を取得できませんでした。位置情報の使用を許可してください。'); },
-    {enableHighAccuracy:true,timeout:15000,maximumAge:0}
+    function(err){
+      clearInterval(countIv);
+      var msgs = {
+        1: '位置情報の使用が拒否されています。
+スマートフォンの設定で位置情報を許可してください。',
+        2: '位置情報を取得できませんでした。
+電波の良い場所で再度お試しください。',
+        3: '位置情報の取得がタイムアウトしました。
+再度ページを開いてお試しください。'
+      };
+      cb(false, msgs[err.code] || '位置情報を取得できませんでした。');
+    },
+    {enableHighAccuracy:true, timeout:30000, maximumAge:0}
   );
 }
 
