@@ -136,6 +136,11 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
       <div class="tbar-out"><div class="tbar-in" id="tbar" style="width:100%"></div></div>
       <div class="tbar-txt">次の更新まで <span id="tsec">90</span> 秒</div>
       <div class="tok">トークン: <span id="tok-val">-</span></div>
+      <div style="background:#FAEEDA;border-radius:8px;padding:10px 14px;margin-top:10px;text-align:center;">
+        <div style="font-size:11px;color:#854F0B;margin-bottom:4px;font-weight:600;">🌙 本日の時間外受付 PIN番号</div>
+        <div style="font-size:36px;font-weight:700;color:#854F0B;letter-spacing:0.3em;" id="today-pin">----</div>
+        <div style="font-size:10px;color:#888780;margin-top:4px;">ドライバーにこの番号をお伝えください</div>
+      </div>
       <button class="bigbtn btn-dark" id="btn-sim">▶ ドライバー画面でシミュレート</button>
     </div>
 
@@ -364,11 +369,24 @@ function checkNightGPS(callback){
   );
 }
 
+function getTodayPIN(){
+  var d = new Date();
+  if(d.getHours() >= 17 && d.getMinutes() >= 30){
+    d.setDate(d.getDate() + 1);
+  }
+  var seed = d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
+  var pin = Math.abs((seed * 6364136 + 1442695) % 9000) + 1000;
+  return String(pin);
+}
+
 function initNightQR(){
   // デモ用：常時表示（実運用時は時間帯制御あり 17:30〜翌8:30）
   var box = document.getElementById('night-qr-box');
   box.style.display = 'block';
   drawQRCanvas('night-qr-canvas', NIGHT_TOKEN);
+  // PIN表示
+  var pinEl = document.getElementById('today-pin');
+  if(pinEl) pinEl.textContent = getTodayPIN();
 }
 
 function drawQRCanvasWithTest(wrapId, token, testHour){
