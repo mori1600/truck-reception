@@ -1088,6 +1088,9 @@ if(_drvToken){
 } else {
   // iPadモード：通常起動
   addSample();
+  // 昼間QRを直接設定（JS実行タイミング問題を回避）
+  var nqImg = document.getElementById('normal-qr-img');
+  if(nqImg){ nqImg.src = QR_NIGHT; }
   issueToken();
   startTimer();
   renderBoard();
@@ -1097,6 +1100,12 @@ if(_drvToken){
 }
 
 })();
+
+// DOM読み込み完了後にQRを確実に表示
+document.addEventListener('DOMContentLoaded', function(){
+  var nqImg = document.getElementById('normal-qr-img');
+  if(nqImg && !nqImg.src) nqImg.src = QR_NIGHT;
+});
 </script>
 </body>
 </html>
