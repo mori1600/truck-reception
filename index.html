@@ -99,7 +99,6 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
   #print-content { width:100% !important; margin:0 !important; padding:15mm 12mm !important; }
 }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div class="topbar">
@@ -259,24 +258,21 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
 var Q=[], NID=1, LAST=null, DEMO_TOK='', TOKENS=[];
 var TTL=90, tLeft=90, tIv=null;
 
-/* ---- QR描画（qrcode.js使用） ---- */
-var BASE_URL = 'https://mori1600.github.io/truck-reception/drv_test.html';
-var qrNormal = null;
-var qrNight  = null;
+/* ---- QR描画（base64埋め込み） ---- */
+var NIGHT_TOKEN = 'MABUCHI-NIGHT-YATOMI';
+
+// 事前生成済みQR画像（base64）
+var QR_NIGHT    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPYAAAD2AQAAAADNaUdlAAACT0lEQVR4nO2ZQW7rMAxEn74MdCnfoEehb/aRmzFHyQ3oZQEZ8xd0kl0S9AONBVQLAcksPKbJ0ZAq4tHa/jyE4Rf/PxwFQA1qAFaljtUwAKy/m98LuEkCvj5d8r4uNaB5lRSH4PcUL2Wh+YRN6wLAuQNrmQ7C7xV8XXQp2+dpm5lgK8vB+D3Dm5fZANqpY1PzH37+d3EUJqnKa0BTx6qk2PcR6vdcSmH9C1Yvy0fAukywlVLmQ/B7vJQrkDz3msGXJB0+/iiM5jSBKUxhqf9V3ofQ/3YCOvTm20yZgXP+Q/MD8HuyMk9qAPTmVV7livwEY+RPh95E7k2S9+aSj8H/Kp41S1jqux2yEfwPWbMKAwPraYeaJzQCf/ZUhypPC7rHv42RP9dsdwU3Ie25v5vfK/wBsJQgmmhew3obon7/AFXeOYPVMMW5wzbzEWxlOQS/h0uZ82Edg0x7p3mHQfRndz5gqfk0KawGfYj6DSTPtFdA89TPDnWY+jWFZdghX8H3s+zd/F7J/1T7Glbj9jrQhvHPOWpIwc9ToIZlRQzAX743j1CvXqg3h1HOX9c9/oClcgKjxB+o11M4/bOULnqE+If1XS1zFuHpRXvTCP3jrf+yPAWyEejAGPq/4x222eAM9jUz5YlwHH4P8LWUUqbr7zx2FUxH4fdk7fO3uOX/7p+zBTh8/pDVuiu/lJWblwIj8L/ia0nbTztNkJ9ghPnPHZ8wXUpfF10W1uXHn/89/D5/Tv/Z00jLO4zQP97vv3Lyk51L3Sdyx8//8nt/+lb8H/J5Bo7B0sciAAAAAElFTkSuQmCC";
+var QR_TEST18   = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQ4AAAEOAQAAAABQysQIAAAChklEQVR4nO2aQa4bRwxE35gCsqQAH+AfhblZkJtRR/ENqD0H5QVbXwGy+B+wE6sBN2YxmuGCBTarqzg6xAfr/PJRBPwO+S9DUAGY1C5cKppgXUD0K6X7OUQhyQqTrGiXKddDSbUlIghTNkhSYQtjWGH7Ibq831ldzwuC88r5tc63uvzPufzckPtfx5tMeb4lLrj1r8vlx0IefaRsT0lA+zB6bNtHAFbx7wvYkuvWSlwNUk69IObFfoimIpIpARUq8FSFKto3RPSPDjKllFYxR5Ip99x1CVghLc2gwaVUBVvWSFI2YRXTR7PrRkX0njVqT0AV7WkVA2qh25EZlE0sNpAaFuntXKNFCw/Vbetn4NqUGRoaIIa62zV8jmtP9tYYh/FEvbxSNoHnlruuGHmAJ76wzFY0aUM3gSrGE+EaqWBD5tKA3RHRdFCDDbrnrttVez8kkCDaNaS92mo/ZvgCwf1QcV4B7NvB/bBCdbOC+5+vlu7HIf73BY7rwnVxNXHh9pgFvVq6H6/RCWNj8QTmeDIlswNfKd3PaoYleDDlHLL2/nC/PnpqbynbNUbPlCbti2hNU8cTTZnGj7s29Ud4tqcV7dkjWccfberKK5pYU2LlCNfBuK8/0irKHKkJI7+HH3bUDIFrrCsuSSPqrKKJLbX3DOigXc0y5kxDbcp1FaNRxxxJCTGCnGHCV0r3845vjiGWFMeeTzbcdQVL88ypmu0a9zrT7w0RPT/nLRvLjINm7LAlIohhg7lRvRtYNmSGR8hoBm4A3Lgf5xUVf3zb0B/Nuh/nlSHtiwu4EOc1fkkuPxby7KOZCM00tX2N8bdUqgXzbaLmC8VDrK732zHD8ftfNC8f8h2IpsdHbrsWsQAAAABJRU5ErkJggg==";
+var QR_TEST12   = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQ4AAAEOAQAAAABQysQIAAACvElEQVR4nO2aS24kOQxEn8wEaskE+gB9FNXNBr6Z6ii+AXNpgImYBZXG7NxAuz0loLWoLxcMUApGUNnEJ+t8+SwC/ob8yRAUABZdkmkkXYEFFh2Ans+U7q8h6pIsgJ70j98tukmK5RC9AK3doQObj3RZgOv8OTja9t25/H7INt99NB9bsDmJtrem4/7duXwtomMXvLeePwDy6M1j++Zcvi5EGrhauwP2dm+tbf6qtzuu/O5cviTk0VrjuFtwCzaw6Bz/bHC21vanS/ezteHVY8e1/zh3zMf5I+bXZ0r3F9k7ATBJQboUXRrpQ9EX7UcWPUFS0qGnj6TjI+mS1kMkmYZFx2WBYmIxCbqt12GRlC4F0ijSM8mCkkML1uiF425vbaOfO9A52vvO+94tOH/q3J8t3c9X6dIp7Xzgsugl6tbddXOnSRbdNExDUejGgkoVlcaW9B9+SB85y7cgIimhnFG9VktKiiuWY4Zib1VR5vHxkYDX3lsQUVCN1aoigJd4GLkkM7zgsnhIrwmttZvEcd9cG9yCNdm7X1w3LLqC+mAagC15joZJZcZNA1e6qjGlj0UR4SoeSB+mAX0epUWVaoBP73ApVUkjy8Cu6CYk6CUPcGXNuFxlKNas0YcnoiRQ+lTj0Nc8RyVNy1bUTLVqRC5ao1rRs1T35L2exXUrdtjjDo8am5w7Cbe3Vv9t8L4/W7qfryJtSaXibFraXtsv19R1JQ9qjJ9+mSNQsKY/4iK3jo/ZXiVcq3JdMP04cFUKaojXl3QTF9dVP51dFVh1FvRxx4dNMzsHDmWOFqzRC/QSQgm3IHmcO8zPLHg3MVWQTVsEhaKM+araeyLKeb88rrn3FEWrIbpCXJsLfz13bgE8LB4c9/8ll98Lue7Ka+gNVgPJor5lOyxcTy+4rnGx5oMN652j9vcpmqcP+Rf8On4DcOFyXgAAAABJRU5ErkJggg==";
+var QR_PRINT    = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZoAAAGaAQAAAAAefbjOAAADlUlEQVR4nO2cTa6jSAyAPzdIWRbSO8A7Ctygj9R6R+obwFFygJGoZaRCnoVdBDYt9YuGJIxZIAL1SWXhuPxTRpS/PqYff89AQAEF9KZQFj+GXE8iLTIATNIiQ26pg9qjpxfQsVALNAUAAdDps7QKoOSPQj9/AKlAPwLkj0OnF9CTIP/vp4IMNCpDbtcRi+gImC0ZnjK9gJ4F5RbVqwjT502YOpABbOl4gekFdAS0e9WptAJNEf/5jyi5KUKanzS9gJ4EqWrxG/28CNAo5IvKkAqq1xZIqr5+vIVMAX0fWiyKgHxRoFH6a4v8mgHyPeoQEemOn15Ah0ItpDVJlRdRuImuV/4gFbaZrBeXKaAHodwi0i0i8qkqItVQkC+qXx1UQ7GI+5ivL1NAj0DJTYGOgI6pYGGGrRAsm6eWmXgDmQL6NoSuB/1c742pQK9+Up0bpZ8bpVdVHV9cpoAegex1V/Og5i34VVJV1WIKYuFIaMTpIdw8aMFsRD97MGqGY4T1QWMORmjEqSG3EesJcyppVEcaX07Me1gHh0acGUJ1hq2TAO5CWGZidTDMRqRYNU4O1cVh4ykU1xLMragWZLxfvbhMAT0O1R0QF63piXVAutWKZ7qJDBF9nh3aeJbVi/RI8x5m4OuHX4WNODW0FrmqHozmWbI6DgXLYo92NzTi5FALuUNhsWoGAApLWyOMWgXt5w6dfs6HTi+gwyHzIt1QJI80q2fpSYmNjejDszw7VN85az4i6ZqZgKoWZZe1enGZAnoUWoR+Xjyk6K9e53RVyff4Y9WSN5ApoO9CtYylqrZ+rGmHTWbCQo8ZCM/y/wBZNdxthAwsNe2A77zVr8+buI2IfMTZoa1/sLURgBc3/KqODxtxcmi36VZ18+I31XA/ipXJQyPODuWL1zW+RMSr4XZabDeu9fdMXWM+5jvIFNC3of0eKs9dW2bivl1iXEdHPuL00KaDR8nA9HNWsZwlTbEdl9Yamj9qa8+LyxTQg9C9N3z3ZJOk1Ln2+z1hegEdC+17wxehvwpqealUENJN6H+7BdGpaw6dXkBPgmpvuNcwZEjF7lkwOrKISLfIDjpuegE9C8riXwaYOthtlim74vg7yRTQg5AMNKp6FdHRPh7Q4jHnK0wvoP8cslftialUWqZuBvMt0mx+hJJKq1OHeJPPi8sU0CNQ3QsBa6uGb8iunVyw2ZAdWezTQxJfLwwooID+cPwLMB+N6632DRAAAAAASUVORK5CYII=";
+var QR_CURRENT  = QR_NIGHT; // 現在表示中のQR
 
 function drawQR(token){
-  var url = BASE_URL + '?drv=' + token;
-  var el  = document.getElementById('qr-canvas-wrap');
+  // 通常QRは夜間QRと同じ（デモ版）
+  var el = document.getElementById('qr-canvas-wrap');
   if(!el) return;
-  el.innerHTML = '';
-  try{
-    qrNormal = new QRCode(el, {
-      text: url,
-      width: 200, height: 200,
-      colorDark: '#2c2c2a', colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
-  }catch(e){ el.textContent = 'QR生成エラー: ' + e; }
+  el.innerHTML = '<img src="' + QR_NIGHT + '" width="200" height="200" style="border-radius:4px;">';
 }
 
 /* ---- トークン ---- */
@@ -390,36 +386,19 @@ function initNightQR(){
 }
 
 function drawQRCanvasWithTest(wrapId, token, testHour){
-  // テスト用時刻パラメータをURLに付加してQR生成
   var el = document.getElementById(wrapId);
   if(!el) return;
-  el.innerHTML = '';
-  var url = BASE_URL + '?drv=' + token + '&testhour=' + testHour;
-  try{
-    new QRCode(el, {
-      text: url,
-      width: 200, height: 200,
-      colorDark: '#2c2c2a', colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
-  }catch(e){ el.textContent = 'QR生成エラー: ' + e; }
+  var src = testHour === 18 ? QR_TEST18 : testHour === 12 ? QR_TEST12 : QR_NIGHT;
+  QR_CURRENT = src;
+  el.innerHTML = '<img src="' + src + '" width="200" height="200" style="border-radius:4px;">';
 }
 
 function drawQRCanvas(canvasId, token){
-  // 夜間QR: divラッパーIDで描画
   var wrapId = canvasId.replace('-canvas', '-wrap');
   var el = document.getElementById(wrapId);
   if(!el) return;
-  el.innerHTML = '';
-  var url = BASE_URL + '?drv=' + token;
-  try{
-    qrNight = new QRCode(el, {
-      text: url,
-      width: 200, height: 200,
-      colorDark: '#2c2c2a', colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
-  }catch(e){ el.textContent = 'QR生成エラー: ' + e; }
+  QR_CURRENT = QR_NIGHT;
+  el.innerHTML = '<img src="' + QR_NIGHT + '" width="200" height="200" style="border-radius:4px;">';
 }
 
 function elapsed(t){var m=Math.floor((new Date()-t)/60000);return m<1?'たった今':m+'分前';}
@@ -863,10 +842,8 @@ document.getElementById('btn-sim-night').addEventListener('click',function(){
 });
 document.getElementById('btn-print-night').addEventListener('click',function(){
   // qrcode.jsが生成したimg要素のsrcを取得
-  var nightWrap = document.getElementById('night-qr-wrap');
-  var qrImg = nightWrap ? nightWrap.querySelector('img') : null;
-  var imgData = qrImg ? qrImg.src : '';
-  if(!imgData){ errMsg('QRコードが生成されていません。少し待ってから再度お試しください。'); return; }
+  // 現在表示中のQR画像を使用（印刷用大サイズ）
+  var imgData = QR_CURRENT === QR_TEST18 ? QR_TEST18 : QR_CURRENT === QR_TEST12 ? QR_TEST12 : QR_PRINT;
   var overlay = document.getElementById('print-overlay');
   if(!overlay){
     overlay = document.createElement('div');
