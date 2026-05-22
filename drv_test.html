@@ -132,9 +132,8 @@ function getTodayPIN(){
     d.setDate(d.getDate() + 1);
   }
   var seed = d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
-  // 4桁PINを生成（1000〜9999）
-  var pin = ((seed * 6364136223846793 + 1442695040888963407) % 9000 + 1000);
-  return String(Math.abs(pin) % 9000 + 1000);
+  var pin = Math.abs((seed * 6364136 + 1442695) % 9000) + 1000;
+  return String(pin);
 }
 
 /* ===== トースト ===== */
