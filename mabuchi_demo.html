@@ -887,9 +887,9 @@ function showDrv(sim, nightSim){
       rb.disabled=false; rb.style.opacity='1';
       if(nb) nb.style.display='block';
     }
-  } else if(sim&&validToken(DEMO_TOK)){
+  } else if(sim && (DEMO_TOK === 'DEMO_SIMULATE' || validToken(DEMO_TOK))){
     ab.style.background=''; ab.style.borderColor=''; ab.style.color='';
-    ab.className='auth-ok'; ab.textContent='✓ QRコード認証済み（トークン: '+DEMO_TOK+'）';
+    ab.className='auth-ok'; ab.textContent='✓ QRコード認証済み（通常受付・デモ）';
     rb.disabled=false; rb.style.opacity='1';
     var nb=document.getElementById('night-badge');
     if(nb) nb.style.display='none';
@@ -929,7 +929,7 @@ function showDrv(sim, nightSim){
 document.getElementById('btn-mode-ipad').addEventListener('click',function(){ showIPad(); });
 document.getElementById('btn-mode-drv').addEventListener('click',function(){ showDrv(false); });
 document.getElementById('btn-sim').addEventListener('click',function(){
-  DEMO_TOK=document.getElementById('tok-val').textContent;
+  DEMO_TOK = 'DEMO_SIMULATE'; // シミュレーション専用フラグ
   showDrv(true);
 });
 // 時間帯テストボタン
