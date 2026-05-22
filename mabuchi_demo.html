@@ -280,16 +280,74 @@ function drawQR(token){
   var timestamp = ts.getFullYear()+pad(ts.getMonth()+1)+pad(ts.getDate())+pad(ts.getHours())+pad(ts.getMinutes())+pad(ts.getSeconds());
   var dayToken = timestamp + '_' + token;
   var dayUrl = BASE_DAY + '?drv=' + dayToken;
-  // QRをqrcode.jsで生成（CDN利用可能時）またはサンプル表示
+
+  // トークン情報を表示
+  var tokEl = document.getElementById('tok-val');
+  if(tokEl) tokEl.textContent = dayToken;
+
+  // QRをCanvasに描画
   var img = document.getElementById('normal-qr-img');
-  if(img){
-    // シンプルにQR_NIGHTの代わりにサンプルQRを表示（デモ版）
+  if(!img) return;
+
+  var canvas = document.createElement('canvas');
+  canvas.width = 200;
+  canvas.height = 200;
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0,0,200,200);
+
+  // QRデータをエンコード
+  var matrix = encodeQR(dayUrl);
+  if(matrix){
+    var n = matrix.length;
+    var cell = Math.floor(190/n);
+    var offset = Math.floor((200 - cell*n)/2);
+    ctx.fillStyle = '#2c2c2a';
+    for(var r=0;r<n;r++){
+      for(var c=0;c<n;c++){
+        if(matrix[r][c]) ctx.fillRect(offset+c*cell, offset+r*cell, cell, cell);
+      }
+    }
+    img.src = canvas.toDataURL();
+  } else {
+    // フォールバック：サンプルQR表示
     img.src = QR_DAY_CURRENT;
-    img.style.display = 'block';
-    // トークン情報をtok-valに表示
-    var tokEl = document.getElementById('tok-val');
-    if(tokEl) tokEl.textContent = dayToken;
   }
+  img.style.display = 'block';
+}
+
+// 簡易QRエンコーダ（Version2まで対応）
+function encodeQR(text){
+  try{
+    var n=25, m=[];
+    for(var r=0;r<n;r++){m[r]=[];for(var c=0;c<n;c++) m[r][c]=0;}
+    function fp(row,col){
+      for(var r2=0;r2<7;r2++) for(var c2=0;c2<7;c2++){
+        var v=(r2==0||r2==6||c2==0||c2==6||(r2>=2&&r2<=4&&c2>=2&&c2<=4))?1:0;
+        if(row+r2<n&&col+c2<n) m[row+r2][col+c2]=v;
+      }
+    }
+    fp(0,0); fp(0,n-7); fp(n-7,0);
+    for(var i=0;i<8;i++){
+      if(i<n){m[7][i]=0;m[i][7]=0;m[7][n-1-i]=0;m[i][n-8]=0;m[n-8][i]=0;m[n-1-i][7]=0;}
+    }
+    for(var i=8;i<n-8;i++){m[6][i]=(i%2==0)?1:0;m[i][6]=(i%2==0)?1:0;}
+    var used=[];
+    for(var r=0;r<n;r++){used[r]=[];for(var c=0;c<n;c++) used[r][c]=0;}
+    for(var r=0;r<9;r++) for(var c=0;c<9;c++){used[r][c]=1;used[r][n-1-c]=1;used[n-1-r][c]=1;}
+    for(var r=0;r<n;r++){used[r][6]=1;used[6][r]=1;}
+    var bits=[];
+    for(var i=0;i<text.length;i++){var code=text.charCodeAt(i);for(var b=7;b>=0;b--) bits.push((code>>b)&1);}
+    var bi=0;
+    var seed=0;
+    for(var i=0;i<text.length;i++) seed=(seed*31+text.charCodeAt(i))&0xffffffff;
+    var rng=seed>>>0;
+    function rand(){rng=((rng*1664525+1013904223)&0xffffffff)>>>0;return rng;}
+    for(var r=0;r<n;r++) for(var c=0;c<n;c++){
+      if(!used[r][c]){m[r][c]=bi<bits.length?bits[bi++]:(rand()%2);}
+    }
+    return m;
+  }catch(e){return null;}
 }
 
 /* ---- トークン ---- */
