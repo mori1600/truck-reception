@@ -223,11 +223,11 @@ document.getElementById('btn-dreg').addEventListener('click', function(){
 
   document.getElementById('pg-reg').style.display = 'none';
   document.getElementById('pg-stat').style.display = 'block';
-  document.getElementById('d-pos').textContent = '受付完了　'+dr+'様';
-  document.getElementById('d-sub').textContent =
-    '【マブチ名古屋工場】受付しました。
-'+mm+'/'+dd+' 8:30より順番にご案内いたします。
-順番になりましたらSMSでご連絡いたします。';
+  document.getElementById('d-sub').textContent = '【マブチ名古屋工場】受付しました。'+mm+'/'+dd+' 8:30より順番にご案内いたします。順番になりましたらSMSでご連絡いたします。';
+
+
+
+
   document.getElementById('d-note').textContent = '※このデモ版ではSMSは送信されません';
   showToast('📱 【マブチ名古屋工場】'+dr+'様、受付しました。'+mm+'/'+dd+' 8:30より順番にご案内いたします。');
 });
