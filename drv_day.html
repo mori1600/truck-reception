@@ -40,6 +40,7 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
   <div class="box">
     <div class="sec">荷下ろし受付登録</div>
     <div id="auth-msg" class="auth-ok">✓ QRコード認証済み</div>
+    <div id="token-debug" style="font-size:10px;color:#888;margin-bottom:6px;"></div>
     <label>会社名</label>
     <input type="text" id="d-co" placeholder="山田運輸">
     <label>ドライバー名</label>
@@ -98,16 +99,23 @@ function isValidToken(token){
   if(parts.length !== 2) return false;
   var ts = parts[0]; // YYYYMMDDHHmmss
   if(ts.length !== 14) return false;
-  var year  = parseInt(ts.slice(0,4));
-  var month = parseInt(ts.slice(4,6)) - 1;
-  var day   = parseInt(ts.slice(6,8));
-  var hour  = parseInt(ts.slice(8,10));
-  var min   = parseInt(ts.slice(10,12));
-  var sec   = parseInt(ts.slice(12,14));
-  var issued = new Date(year, month, day, hour, min, sec);
-  var now = new Date();
-  var diff = (now - issued) / 1000; // 秒
-  return diff >= 0 && diff <= 120; // 120秒以内（2分間）有効
+  try{
+    var year  = parseInt(ts.slice(0,4),10);
+    var month = parseInt(ts.slice(4,6),10) - 1;
+    var day   = parseInt(ts.slice(6,8),10);
+    var hour  = parseInt(ts.slice(8,10),10);
+    var min   = parseInt(ts.slice(10,12),10);
+    var sec   = parseInt(ts.slice(12,14),10);
+    var issued = new Date(year, month, day, hour, min, sec);
+    var now = new Date();
+    var diff = (now - issued) / 1000; // 秒
+    // デバッグ：差分を表示
+    var debugEl = document.getElementById('token-debug');
+    if(debugEl) debugEl.textContent = '発行時刻: '+issued.toLocaleTimeString()+' / 経過: '+Math.round(diff)+'秒';
+    return diff >= 0 && diff <= 150; // 150秒以内（2分30秒）有効
+  }catch(e){
+    return false;
+  }
 }
 
 /* ===== 認証チェック ===== */
