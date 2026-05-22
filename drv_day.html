@@ -107,7 +107,7 @@ function isValidToken(token){
   var issued = new Date(year, month, day, hour, min, sec);
   var now = new Date();
   var diff = (now - issued) / 1000; // 秒
-  return diff >= 0 && diff <= 90;
+  return diff >= 0 && diff <= 120; // 120秒以内（2分間）有効
 }
 
 /* ===== 認証チェック ===== */
@@ -121,7 +121,7 @@ if(!TOKEN){
   rb.style.opacity = '0.4';
 } else if(!isValidToken(TOKEN)){
   ab.className = 'auth-ng';
-  ab.textContent = '✗ このQRコードは期限切れです（有効期限：90秒）。受付iPadの新しいQRコードをスキャンしてください。';
+  ab.textContent = '✗ このQRコードは期限切れです（有効期限：2分間）。受付iPadに表示されている新しいQRコードをスキャンしてください。';
   rb.disabled = true;
   rb.style.opacity = '0.4';
 } else {
