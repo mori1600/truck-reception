@@ -135,7 +135,7 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
       <div class="tbar-out"><div class="tbar-in" id="tbar" style="width:100%"></div></div>
       <div class="tbar-txt">次の更新まで <span id="tsec">90</span> 秒</div>
       <div class="tok">トークン: <span id="tok-val">-</span></div>
-      <div style="background:#FAEEDA;border-radius:8px;padding:10px 14px;margin-top:10px;text-align:center;">
+      <div style="display:none;">
         <div style="font-size:11px;color:#854F0B;margin-bottom:4px;font-weight:600;">🌙 本日の時間外受付 PIN番号</div>
         <div style="font-size:36px;font-weight:700;color:#854F0B;letter-spacing:0.3em;" id="today-pin">----</div>
         <div style="font-size:10px;color:#888780;margin-top:4px;">ドライバーにこの番号をお伝えください</div>
@@ -9538,14 +9538,10 @@ document.getElementById('test-out').addEventListener('click',function(){
 });
 
 document.getElementById('btn-sim-night').addEventListener('click',function(){
-  DEMO_TOK = NIGHT_TOKEN;
-  document.getElementById('pg-reg').style.display='block';
-  document.getElementById('pg-stat').style.display='none';
-  showDrv(true, true); // nightSim=true
-  document.getElementById('btn-mode-drv').classList.add('on');
-  document.getElementById('btn-mode-ipad').classList.remove('on');
-  document.getElementById('view-ipad').style.display='none';
-  document.getElementById('view-drv').style.display='block';
+  // 夜間シミュレーション：drv_test.htmlをtestgps=ok付きで開く
+  var th = FAKE_HOUR >= 0 ? FAKE_HOUR : 18; // デフォルト18時
+  var url = 'https://mori1600.github.io/truck-reception/drv_test.html?drv=' + NIGHT_TOKEN + '&testhour=' + th + '&testgps=ok';
+  window.open(url, '_blank');
 });
 document.getElementById('btn-print-night').addEventListener('click',function(){
   // PIN番号と日付をセット
