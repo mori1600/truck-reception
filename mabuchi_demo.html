@@ -8935,16 +8935,19 @@ function drawQR(token){
   var img = document.getElementById('normal-qr-img');
   if(!img) return;
   if(entry){
-    img.src = entry[2]; // QR画像
+    img.src = 'data:image/png;base64,' + entry[2]; // QR画像
     img.style.display = 'block';
     var tokEl = document.getElementById('tok-val');
     if(tokEl) tokEl.textContent = entry[1].slice(0,14); // タイムスタンプ部分のみ表示
   } else {
-    // 有効なQRがない場合（時刻が範囲外）→ページをリロードして新しいQRを取得
-    img.src = '';
+    // 有効なQRがない場合でも最新のQRを表示（リロードしない）
+    var fallback = DAY_QR_TABLE[DAY_QR_TABLE.length - 1];
+    if(fallback){
+      img.src = 'data:image/png;base64,' + fallback[2];
+      img.style.display = 'block';
+    }
     var tokEl = document.getElementById('tok-val');
-    if(tokEl) tokEl.textContent = '更新中...';
-    setTimeout(function(){ location.reload(); }, 2000);
+    if(tokEl) tokEl.textContent = '-';
   }
 }
 
