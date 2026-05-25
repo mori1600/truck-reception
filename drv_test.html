@@ -13,7 +13,6 @@ label{font-size:13px;color:#5f5e5a;display:block;margin:10px 0 3px;}
 input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c7;border-radius:8px;background:white;color:#2c2c2a;-webkit-appearance:none;}
 .bigbtn{width:100%;margin-top:12px;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;color:white;cursor:pointer;}
 .btn-green{background:#2d6a1f;}
-.btn-dark{background:#2c2c2a;}
 .btn-gray{background:#5f5e5a;margin-top:8px;}
 .auth-ok{background:#EAF3DE;border:1px solid #C0DD97;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:#3B6D11;line-height:1.6;}
 .auth-ng{background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px;color:#A32D2D;line-height:1.6;}
@@ -21,16 +20,9 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
 .toast{border-radius:8px;padding:10px;margin-bottom:10px;font-size:13px;display:none;line-height:1.6;}
 .toast-ok{background:#EAF3DE;border:1px solid #C0DD97;color:#3B6D11;}
 .toast-ng{background:#FCEBEB;border:1px solid #F09595;color:#A32D2D;}
-/* PIN入力 */
-.pin-wrap{text-align:center;padding:10px 0;}
-.pin-title{font-size:13px;color:#5f5e5a;margin-bottom:16px;line-height:1.6;}
-.pin-input{width:160px;font-size:32px;letter-spacing:0.3em;text-align:center;padding:12px;border:2px solid #d3d1c7;border-radius:10px;background:white;color:#2c2c2a;font-weight:600;}
-.pin-input:focus{border-color:#2c2c2a;outline:none;}
-.pin-hint{font-size:11px;color:#888780;margin-top:8px;}
-/* 登録フォーム */
 .night-badge{background:#FAEEDA;border:1px solid #E8A838;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#854F0B;}
 .stat-box{text-align:center;padding:24px 0;}
-.stat-num{font-size:22px;font-weight:600;color:#2c2c2a;margin-bottom:8px;line-height:1.5;}
+.stat-num{font-size:20px;font-weight:600;color:#2c2c2a;margin-bottom:8px;line-height:1.5;}
 .stat-sub{font-size:13px;color:#5f5e5a;line-height:1.6;}
 .stat-note{font-size:11px;color:#888780;margin-top:8px;padding:8px;background:#f1efe8;border-radius:6px;}
 </style>
@@ -43,18 +35,14 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
 
 <div id="toast" class="toast toast-ok"></div>
 
-<!-- PIN認証画面 -->
-<div id="pg-pin">
+<!-- 認証中・エラー表示 -->
+<div id="pg-auth">
   <div class="box">
-    <div class="sec">時間外受付　PIN認証</div>
-    <div id="pin-auth-msg" class="auth-warn">🌙 時間外受付QRコード認証済み<br>担当者より連絡されたPIN番号を入力してください</div>
-    <div class="pin-wrap">
-      <div class="pin-title">PIN番号（4桁）を入力してください</div>
-      <input type="tel" id="pin-input" class="pin-input" maxlength="4" inputmode="numeric" placeholder="----">
-      <div class="pin-hint">PIN番号は当日の担当者にお問い合わせください</div>
+    <div class="sec">時間外受付　認証</div>
+    <div id="auth-msg" class="auth-warn">🌙 時間外受付QRコード認証済み。位置情報を確認しています...</div>
+    <div id="gps-progress" style="text-align:center;padding:16px 0;color:#5f5e5a;font-size:13px;">
+      📍 現在地を確認中です。しばらくお待ちください...
     </div>
-    <div id="pin-err-msg" style="display:none;" class="auth-ng">✗ PIN番号が正しくありません。担当者に確認してください。</div>
-    <button class="bigbtn btn-dark" id="btn-pin">確認する</button>
   </div>
 </div>
 
@@ -62,7 +50,7 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
 <div id="pg-reg" style="display:none;">
   <div class="box">
     <div class="sec">荷下ろし受付登録</div>
-    <div class="auth-ok" id="auth-ok-msg">✓ PIN認証済み</div>
+    <div id="auth-ok-msg" class="auth-ok">✓ 時間外受付QR・位置情報・時間帯　認証済み</div>
     <div class="night-badge">🌙 時間外受付（17:30〜翌8:30）｜8:30より順番にご案内いたします</div>
     <label>会社名</label>
     <input type="text" id="d-co" placeholder="山田運輸">
@@ -100,9 +88,12 @@ input,select{width:100%;font-size:16px;padding:10px 12px;border:1px solid #d3d1c
 (function(){
 
 /* ===== 設定 ===== */
-var NIGHT_TOKEN   = 'MABUCHI-NIGHT-YATOMI';
-var NIGHT_START_H = 17, NIGHT_START_M = 30;
-var NIGHT_END_H   =  8, NIGHT_END_M   = 30;
+var NIGHT_TOKEN    = 'MABUCHI-NIGHT-YATOMI';
+var NIGHT_START_H  = 17, NIGHT_START_M = 30;
+var NIGHT_END_H    =  8, NIGHT_END_M   = 30;
+var FACTORY_LAT    = 35.03824266375355;
+var FACTORY_LNG    = 136.7903838499678;
+var FACTORY_RADIUS = 100; // 100m以内
 
 /* ===== URLパラメータ解析 ===== */
 var params = {};
@@ -112,6 +103,7 @@ window.location.search.slice(1).split('&').forEach(function(kv){
 });
 var TOKEN    = params['drv']      || '';
 var TESTHOUR = params['testhour'] ? parseInt(params['testhour']) : -1;
+var TESTGPS  = params['testgps']  || ''; // デモ用：'ok'でGPSスキップ
 var FAKE_HOUR = TESTHOUR >= 0 ? TESTHOUR : -1;
 
 /* ===== 時間帯判定 ===== */
@@ -122,18 +114,50 @@ function isNightTime(){
   return cur >= st || cur < en;
 }
 
-/* ===== PIN管理 ===== */
-// 今日の日付ベースでPINを自動生成（日付が変わると変わる）
-// 実運用では管理者がiPad画面でPINを確認してドライバーに伝える
-function getTodayPIN(){
-  var d = new Date();
-  // 17:30以降は翌日のPINを使用
-  if(d.getHours() >= 17 && d.getMinutes() >= 30){
-    d.setDate(d.getDate() + 1);
+/* ===== 距離計算 ===== */
+function calcDist(lat1, lng1, lat2, lng2){
+  var R = 6371000;
+  var dLat = (lat2-lat1)*Math.PI/180;
+  var dLng = (lng2-lng1)*Math.PI/180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+          Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+          Math.sin(dLng/2)*Math.sin(dLng/2);
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+/* ===== GPS確認 ===== */
+function checkGPS(cb){
+  if(!navigator.geolocation){
+    cb(false, '位置情報機能が使用できません');
+    return;
   }
-  var seed = d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate();
-  var pin = Math.abs((seed * 6364136 + 1442695) % 9000) + 1000;
-  return String(pin);
+  var count = 0;
+  var countIv = setInterval(function(){
+    count++;
+    var prog = document.getElementById('gps-progress');
+    if(prog) prog.textContent = '📍 現在地を確認中です... (' + count + '秒)';
+  }, 1000);
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      clearInterval(countIv);
+      var dist = calcDist(pos.coords.latitude, pos.coords.longitude, FACTORY_LAT, FACTORY_LNG);
+      if(dist <= FACTORY_RADIUS){
+        cb(true, dist + 'm');
+      } else {
+        cb(false, '工場から' + dist + 'm離れています（有効範囲：' + FACTORY_RADIUS + 'm以内）');
+      }
+    },
+    function(err){
+      clearInterval(countIv);
+      var msgs = {
+        1: '位置情報の使用が拒否されています。\nスマートフォンの設定で位置情報を許可してください。',
+        2: '位置情報を取得できませんでした。電波の良い場所でお試しください。',
+        3: '位置情報の取得がタイムアウトしました。再度ページを開いてお試しください。'
+      };
+      cb(false, msgs[err.code] || '位置情報を取得できませんでした。');
+    },
+    {enableHighAccuracy: true, timeout: 30000, maximumAge: 0}
+  );
 }
 
 /* ===== トースト ===== */
@@ -146,68 +170,57 @@ function showToast(msg, isErr){
   t._t = setTimeout(function(){ t.style.display='none'; }, 7000);
 }
 
-/* ===== フォーマット ===== */
-function fmtPh(ph){
-  var d=ph.replace(/\D/g,'');
-  if(d.length===11) return d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7);
-  if(d.length===10) return d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6);
-  return ph;
+/* ===== 認証成功 → フォーム表示 ===== */
+function showForm(distMsg){
+  document.getElementById('pg-auth').style.display = 'none';
+  document.getElementById('pg-reg').style.display = 'block';
+  if(distMsg){
+    document.getElementById('auth-ok-msg').textContent =
+      '✓ 時間外受付QR・位置情報（工場から' + distMsg + '）・時間帯　認証済み';
+  }
+}
+
+/* ===== 認証失敗 ===== */
+function showError(msg){
+  var el = document.getElementById('auth-msg');
+  el.className = 'auth-ng';
+  el.textContent = '✗ ' + msg;
+  var prog = document.getElementById('gps-progress');
+  if(prog) prog.style.display = 'none';
 }
 
 /* ===== 初期認証チェック ===== */
-var pinAuthEl = document.getElementById('pin-auth-msg');
-
 if(!TOKEN){
-  pinAuthEl.className = 'auth-ng';
-  pinAuthEl.textContent = '✗ 無効なアクセスです。受付のQRコードをスキャンしてください。';
-  document.getElementById('pin-input').disabled = true;
-  document.getElementById('btn-pin').disabled = true;
-  document.getElementById('btn-pin').style.opacity = '0.4';
+  showError('無効なアクセスです。受付のQRコードをスキャンしてください。');
 } else if(TOKEN !== NIGHT_TOKEN){
-  pinAuthEl.className = 'auth-ng';
-  pinAuthEl.textContent = '✗ このQRコードは無効です。受付のQRコードをスキャンしてください。';
-  document.getElementById('pin-input').disabled = true;
-  document.getElementById('btn-pin').disabled = true;
-  document.getElementById('btn-pin').style.opacity = '0.4';
+  showError('このQRコードは無効です。受付のQRコードをスキャンしてください。');
 } else if(!isNightTime()){
-  pinAuthEl.className = 'auth-ng';
-  pinAuthEl.textContent = '✗ 時間外受付の対象時間外です（受付時間：17:30〜翌8:30）';
-  document.getElementById('pin-input').disabled = true;
-  document.getElementById('btn-pin').disabled = true;
-  document.getElementById('btn-pin').style.opacity = '0.4';
-}
-
-/* ===== PIN確認ボタン ===== */
-document.getElementById('btn-pin').addEventListener('click', function(){
-  var inputPin = (document.getElementById('pin-input').value || '').trim();
-  var correctPin = getTodayPIN();
-  var errEl = document.getElementById('pin-err-msg');
-  if(inputPin === correctPin){
-    errEl.style.display = 'none';
-    document.getElementById('pg-pin').style.display = 'none';
-    document.getElementById('pg-reg').style.display = 'block';
-    document.getElementById('auth-ok-msg').textContent = '✓ PIN認証済み（時間外受付）';
+  showError('時間外受付の対象時間外です（受付時間：17:30〜翌8:30）');
+} else {
+  // 時間帯OK → GPS確認
+  if(TESTGPS === 'ok'){
+    // デモ用：GPSスキップ
+    showForm('デモ');
   } else {
-    errEl.style.display = 'block';
-    document.getElementById('pin-input').value = '';
-    document.getElementById('pin-input').focus();
+    checkGPS(function(ok, msg){
+      if(ok){
+        showForm(msg);
+      } else {
+        showError(msg);
+      }
+    });
   }
-});
-
-/* ===== Enterキー対応 ===== */
-document.getElementById('pin-input').addEventListener('keyup', function(e){
-  if(e.key === 'Enter') document.getElementById('btn-pin').click();
-  // 4桁入力で自動確認
-  if(this.value.length === 4) document.getElementById('btn-pin').click();
-});
+}
 
 /* ===== 登録処理 ===== */
 document.getElementById('btn-dreg').addEventListener('click', function(){
   var co = (document.getElementById('d-co').value||'').trim() || '未入力';
   var dr = (document.getElementById('d-dr').value||'').trim() || '未入力';
-  var ph = (document.getElementById('d-ph').value||'').replace(/[-ー−\s]/g,'').trim();
+  var ph = (document.getElementById('d-ph').value||'').replace(/[-\u30fc\u2212\s]/g,'').trim();
   if(!ph){ showToast('⚠ 携帯番号を入力してください', true); return; }
   if(!/^0\d{9,10}$/.test(ph)){ showToast('⚠ 携帯番号を正しく入力してください（例：09012345678）', true); return; }
+  var ty = document.getElementById('d-ty').value;
+  var nt = (document.getElementById('d-nt').value||'').replace(/[-\u30fc\u2212]/g,'').trim();
 
   // 翌8:30を案内時刻として表示
   var now = new Date();
@@ -222,13 +235,10 @@ document.getElementById('btn-dreg').addEventListener('click', function(){
 
   document.getElementById('pg-reg').style.display = 'none';
   document.getElementById('pg-stat').style.display = 'block';
-  document.getElementById('d-sub').textContent = '【マブチ名古屋工場】受付しました。'+mm+'/'+dd+' 8:30より順番にご案内いたします。順番になりましたらSMSでご連絡いたします。';
-
-
-
-
+  document.getElementById('d-pos').textContent = '受付完了　' + dr + '様';
+  document.getElementById('d-sub').textContent = '【マブチ名古屋工場】受付しました。' + mm + '/' + dd + ' 8:30より順番にご案内いたします。順番になりましたらSMSでご連絡いたします。';
   document.getElementById('d-note').textContent = '※このデモ版ではSMSは送信されません';
-  showToast('📱 【マブチ名古屋工場】'+dr+'様、受付しました。'+mm+'/'+dd+' 8:30より順番にご案内いたします。');
+  showToast('📱 【マブチ名古屋工場】' + dr + '様、受付しました。' + mm + '/' + dd + ' 8:30より順番にご案内いたします。');
 });
 
 document.getElementById('btn-ref').addEventListener('click', function(){
